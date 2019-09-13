@@ -1,0 +1,61 @@
+########################################################################
+
+# Checks for libraries.
+AC_CHECK_LIB(popt,poptGetContext)
+
+#
+# Check libpopt
+#
+LIBPOPT_ROOT=""
+AC_ARG_WITH(libpopt,
+	AC_HELP_STRING([--with-libpopt=PATH],
+ 	[Specify libpopt directory.]), 
+         opt_libpopt_root_dir=$withval,
+         opt_libpopt_root_dir=yes)
+if test "$opt_libpopt_root_dir" != "yes"; then
+   LIBPOPT_ROOT=$opt_libpopt_root_dir
+elif test "$LIBPOPT_ROOT" == "yes"; then
+   LIBPOPT_ROOT=""
+fi
+
+LIBPOPT_INCLUDE="/opt/local/include"
+AC_ARG_WITH(libpopt-include,
+	AC_HELP_STRING([--with-libpopt-include=ARCH],
+ 	[Specify libpopt header file directory.]), 
+         opt_libpopt_include=$withval,
+         opt_libpopt_include=yes)
+if test "$opt_libpopt_include" != "yes"; then
+   LIBPOPT_INCLUDE=$opt_libpopt_include
+elif test "$LIBPOPT_INCLUDE" == "yes"; then
+   LIBPOPT_INCLUDE="/usr/local/include"
+fi
+
+LIBPOPT_LIB="/opt/local/lib"
+AC_ARG_WITH(libpopt-lib,
+	AC_HELP_STRING([--with-libpopt-lib=ARCH],
+ 	[Specify libpopt library file directory.]), 
+         opt_libpopt_lib=$withval,
+         opt_libpopt_lib=yes)
+if test "$opt_libpopt_lib" != "yes"; then
+   LIBPOPT_LIB=$opt_libpopt_lib
+elif test "$LIBPOPT_LIB" == "yes"; then
+   LIBPOPT_LIB="/usr/local/lib"
+fi
+
+LIBPOPT_LIBS="-lpopt"
+
+if test "x$LIBPOPT_ROOT" != "x"; then
+     LIBPOPT_CCFLAGS="-I$LIBPOPT_ROOT/include"
+     LIBPOPT_CXXFLAGS="-I$LIBPOPT_ROOT/include"
+     LIBPOPT_LDFLAGS="-Wl,L$LIBPOPT_ROOT/lib -Wl,-rpath,$LIBPOPT_ROOT/lib $LIBPOPT_LIBS"
+else
+     LIBPOPT_CCFLAGS="-I$LIBPOPT_INCLUDE"
+     LIBPOPT_CXXFLAGS="-I$LIBPOPT_INCLUDE"
+     LIBPOPT_LDFLAGS="-Wl,-L$LIBPOPT_LIB -Wl,-rpath,$LIBPOPT_LIB $LIBPOPT_LIBS"
+fi
+
+AC_SUBST(LIBPOPT_CCFLAGS)
+AC_SUBST(LIBPOPT_CXXFLAGS)
+AC_SUBST(LIBPOPT_LDFLAGS)
+
+########################################################################

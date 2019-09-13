@@ -1,0 +1,16 @@
+(YYYY-MM-DD)  AUTHOR  <[BUG-REPORT-ADDRESS]>
+
+	* configure.ac
+	* Makefile.am
+	* bin/Makefile.am
+	* bin/projname.sh.in
+	* include/Makefile.am
+	* include/projname/projname.h
+	* share/Makefile.am
+	* share/projname.txt
+	* src/libprojname.cc
+	* src/Makefile.am
+	* src/projname.cc: created from template
+
+
+

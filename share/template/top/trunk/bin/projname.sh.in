@@ -1,0 +1,5 @@
+#!/bin/sh
+echo 'Exec projname:'
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+exec @bindir@/projname

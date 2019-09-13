@@ -1,0 +1,292 @@
+#!/bin/bash
+# -*- mode: shell-script ; -*-
+#
+function prep_develop_skeleton () {
+
+    # Prepare Help Messages
+    local funcstatus=0
+    local echo_usage_bk=$(declare -f echo_usage)
+    local get_timestamp_bk=$(declare -f get_timestamp)
+    local cleanup_bk=$(declare -f cleanup)
+    local tmpfiles=()
+    local tmpdirs=()
+
+    function  echo_usage () {
+        if [ "$0" == "${BASH_SOURCE:-$0}" ]; then
+            local this=$0
+        else
+            local this="${FUNCNAME[1]}"
+        fi
+        echo "[Usage] % $(basename ${this}) [options] project_name"                                 1>&2
+        echo "[Options]"                                                                            1>&2
+        echo "           -p prefix      : Set destenation directory"                                1>&2
+        echo "           -d description : Set the description of the project"                       1>&2
+        echo "           -a author_name : Set author name"                                          1>&2
+        echo "           -c address     : Set bug report address"                                   1>&2
+        echo "           -u url         : Set reference URL"                                        1>&2
+        echo "           -v version     : Set initial version number"                               1>&2
+        echo "           -s             : Use Subversion directory structure (trank/branches/tags)" 1>&2
+        echo "           -V             : Show verbose output"                                      1>&2
+        echo "           -h             : Show Help (this message)"                                 1>&2
+        return
+    }
+
+    local hndlrhup_bk=$(trap -p SIGHUP)
+    local hndlrint_bk=$(trap -p SIGINT)
+    local hndlrquit_bk=$(trap -p SIGQUIT)
+    local hndlrterm_bk=$(trap -p SIGTERM)
+
+    trap -- 'cleanup ; kill -1  $$' SIGHUP
+    trap -- 'cleanup ; kill -2  $$' SIGINT
+    trap -- 'cleanup ; kill -3  $$' SIGQUIT
+    trap -- 'cleanup ; kill -15 $$' SIGTERM
+
+    function get_timestamp () {
+        if [ "x${OSTYPE}" == 'xdarwin' ]; then
+            stat -f "%Sm" -t "%Y-%m-%d" "$1"
+        else
+            date -r "$1" "+%Y-%m-%d"
+        fi
+    }
+
+    function cleanup () {
+
+        # removr temporary files and directories
+        if [ ${#tmpfiles} -gt 0 ]; then
+            rm -f ${tmpfiles[@]}
+        fi
+        if [ ${#tmpdirs} -gt 0 ]; then
+            rm -rf ${tmpdirs[@]}
+        fi
+
+        # Restore  signal handler
+        if [ -n "${hndlrhup_bk}"  ] ; then eval "${hndlrhup_bk}"  ;  else trap --  1 ; fi
+        if [ -n "${hndlrint_bk}"  ] ; then eval "${hndlrint_bk}"  ;  else trap --  2 ; fi
+        if [ -n "${hndlrquit_bk}" ] ; then eval "${hndlrquit_bk}" ;  else trap --  3 ; fi
+        if [ -n "${hndlrterm_bk}" ] ; then eval "${hndlrterm_bk}" ;  else trap -- 15 ; fi
+
+        # Restore functions
+        unset echo_usage
+        test -n "${echo_usage_bk}" && eval ${echo_usage_bk%\}}" ; }"
+        unset get_timestamp
+        test -n "${get_timestamp_bk}" && eval ${get_timestamp_bk%\}}" ; }"
+
+        unset cleanup
+        test -n "${cleanup_bk}" && eval ${cleanup_bk%\}}" ; }"
+    }
+
+
+    # local tmpdir0=$(mktemp -d "${this}.tmp.XXXXXX" )
+    # local tmpdirs=( "${tmpdirs[@]}" "${tmpdir0}" )
+    # local tmpfile0=$(mktemp   "${this}.tmp.XXXXXX" )
+    # local tmpfiles=( "${tmpfiles[@]}" "${tmpfile0}" )
+
+    local prefix=@prefix@
+    local exec_prefix=@exec_prefix@
+    local datarootdir=@datarootdir@
+    local datadir=${datarootdir}
+    local pkgdatadir=${datadir}/@PACKAGE@
+
+    # Analyze command line options
+    local OPT=""
+    local OPTARG=""
+    local OPTIND=""
+
+    local lclhst=${HOST:-${HOSTNAME:-localhost.localdomain}}
+    local usr=${LOGNAME:-${USER:-anonymous}}
+    local author="${usr}"
+    local address="${usr}@${lclhst}"
+    local prefix=${PWD:-.}
+    local url="(URL)"
+    local version="0.0.1"
+    local description=""
+    local usesvn=0
+    local verbose=0
+
+    while getopts "p:d:a:c:u:v:sVh" OPT
+    do
+        case ${OPT} in
+            p) local prefix="${OPTARG}"
+               ;;
+            d) local description="${OPTARG}"
+               ;;
+            a) local author="${OPTARG}"
+               ;;
+            c) local address="${OPTARG}"
+               ;;
+            u) local url="${OPTARG}"
+               ;;
+            v) local version="${OPTARG}"
+               ;;
+            s) local usesvn=1
+               ;;
+            V) local verbose=1
+               ;;
+            h) echo_usage
+               cleanup
+               return 0
+               ;;
+            \?) echo_usage
+                cleanup
+                return 1
+                ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    if [ ${#} -lt 1 ]; then
+        echo_usage
+        cleanup
+        return 1
+    fi
+    local projname=$(tr '/\\ ' '___' <<< "${1}" )
+    local projnameU=$(tr '[:lower:]-' '[:upper:]_' <<< "${projname}" )
+
+    local scriptpath=${BASH_SOURCE:-$0}
+    local scriptpath=${scriptpath%/}
+    local scriptdir=$(dirname ${scriptpath})
+    local thispath=${scriptpath}/$(basename $0)
+    if [ "$0" == "${BASH_SOURCE:-$0}" ]; then
+        local this=$(basename ${scriptpath})
+    else
+        local this="${FUNCNAME[0]}"
+    fi
+
+    if [ ${verbose:-0} -ne 0 ]; then
+        if [ ${usesvn:-0} -ne 0 ]; then
+            local dir_structure='SVN (trunk/branches/tags)'
+        else
+            local dir_structure='Flat'
+        fi
+        echo 'Project name:                   ' ${projname}      1>&2
+        echo '                                ' ${projnameU}     1>&2
+        echo 'Skeleton will be created under: ' ${prefix}        1>&2
+        echo 'Description:                    ' ${description}   1>&2
+        echo 'author:                         ' ${author}        1>&2
+        echo 'Contact address:                ' ${address}       1>&2
+        echo 'URL:                            ' ${url}           1>&2
+        echo 'version:                        ' ${version}       1>&2
+        echo 'directory structure             ' ${dir_structure} 1>&2
+    fi
+
+    local tmpltdir="${pkgdatadir}/template/top"
+
+    local libtoolizecmd=""
+    local _c=''
+    for _c in 'libtoolize' 'glibtoolize'; do
+        if which "${_c}" 1>/dev/null 2>&1 ; then
+            local libtoolizecmd="${_c}"
+            break
+        fi
+    done
+    if [ -z "${libtoolizecmd}" ]; then
+        echo "[Error] Can not find \"libtoolize\" command. (Exit)" 1>&2
+        cleanup
+        return 1
+    fi
+
+    local dest="${prefix%/}/${projname%/}"
+    if [ -d "${dest}" ]; then
+        echo "Directory already exists! (Exit) : ${dest}" 1>&2
+        cleanup
+        return 1
+    fi
+
+    mkdir -p "${dest}"
+    local tmstmp="$(get_timestamp "${dest}")"
+    local _d=
+    for _d in $(find "${tmpltdir}" -type d -mindepth 1) ; do
+        local _pd="$(dirname ${_d})"
+        local _dd="$(basename ${_d})"
+
+        local _spd=$(${SED:-sed} ${sedopt:--E} -e "s:^${tmpltdir%/}::g" <<< "${_pd}")
+        if [ -n "${_spd}" ]; then
+            local _dp="${dest}/${_spd#/}/${_dd/projname/${projname}}"
+        else
+            local _dp="${dest}/${_dd//projname/${projname}}"
+        fi
+
+        if [ ${usesvn:-0} -eq 0 ]; then
+            local _dp=$(${SED:-sed} ${sedopt:--E} -e "s:^${dest}/(trunk|branches|tags):${dest}:g" <<< "${_dp}" )
+        fi
+
+        mkdir -p "${_dp}"
+        touch -r "${_d}" "${_dp}"
+    done
+
+    local _f=
+    for _f in $(find "${tmpltdir%/}" -type f -mindepth 1) ; do
+        local _d=$(dirname ${_f})
+        local _sd=$(basename ${_f})
+        local _pd=$(dirname ${_d})
+        local _dd=$(basename ${_d})
+
+        local _spd=$(${SED:-sed} ${sedopt:--E} -e "s:^${tmpltdir%/}::g" <<< "${_pd}")
+        if [ -n "$_spd" ]; then
+            local _dp="${dest}/${_spd#/}/${_dd/projname/${projname}}"
+        else
+            local _dp="${dest}/${_dd//projname/${projname}}"
+        fi
+
+        if [ ${usesvn:-0} -eq 0 ]; then
+            local _sd=${_sd#trunk/}
+        fi
+        local _fd="${_dp}/${_sd//projname/${projname}}"
+
+        if [ ${usesvn:-0} -eq 0 ]; then
+            local _fd=$(${SED:-sed} ${sedopt:--E} -e "s:^${dest}/trunk:${dest}:g" <<< "${_fd}" )
+        fi
+
+        ${SED:-sed} ${sedopt:--E} \
+            -e "s/PROJNAME/${projnameU}/g" \
+            -e "s/projname/${projname}/g" \
+            -e "s/\[BUG-REPORT-ADDRESS\]/${address//\//\\/}/g" \
+            -e "s/\[VERSION\]/${version//\//\\/}/g" \
+            -e "s/AUTHOR/${author//\//\\/}/g" \
+            -e "s/\(YYYY-MM-DD\)/${tmstmp//\//\\/}/g" \
+            -e "s/\(BRIEF_DESCRIPTION\)/${description//\//\\/}/g" \
+            -e "s/\(URL\)/${url//\//\\/}/g" \
+            ${_f} > ${_fd}
+        touch -r "${_f}" "${_fd}"
+    done
+
+    if [ ${usesvn:-0} -ne 0 ]; then
+        local destsharedir="${dest}/trunk/share"
+        local destcont="${dest}/trunk"
+        local projcont="${projname}/trunk"
+    else
+        local destsharedir="${dest}/share"
+        local projcont="${projname}"
+        local destcont="${dest}"
+    fi
+
+    (cd "${prefix}"; \
+     find ${projname} -type f 2> /dev/null |
+         ${GREP:-grep} ${grepopt:--E} -v -e "${projcont}/share/${projname}.filelist.*.txt" \
+               1> "${destsharedir}/${projname}.filelist.0.txt" 2> /dev/null )
+
+
+    (cd "${destcont}" && \
+        aclocal              1>&2 && \
+        autoheader           1>&2 && \
+        ${libtoolizecmd} -ic 1>&2 && \
+        automake -ac         1>&2 && \
+        autoconf             1>&2 )
+
+    (cd "${prefix}"; \
+     find ${projname} -type f 2> /dev/null |
+         grep -v -e "${projcont}/share/${projname}.filelist.0.txt" \
+                 -e "${projcont}/share/${projname}.filelist.1.txt" \
+                 -f "${destsharedir}/${projname}.filelist.0.txt" \
+                 1> "${destsharedir}/${projname}.filelist.1.txt" 2> /dev/null )
+
+    # clean up
+    cleanup
+    echo "${dest}"
+    return ${funcstatus}
+}
+
+if [ "$0" == ${BASH_SOURCE:-$0} ]; then
+    prep_develop_skeleton $@
+fi
+

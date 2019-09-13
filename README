@@ -1,0 +1,19 @@
+
+prep_develop_skelton - Prepare the skelton directory structure for developing
+                       C/C++ with GNU autotools
+
+-- 
+[Usage] % prep_develop_skeleton.sh [options] project_name
+[Options]
+           -p prefix      : Set destenation directory
+           -d description : Set the description of the project
+           -a author_name : Set author name
+           -c address     : Set bug report address
+           -u url         : Set reference URL
+           -v version     : Set initial version number
+           -s             : Use Subversion directory structure (trank/branches/tags)
+           -V             : Show verbose output
+           -h             : Show Help (this message)
+
+-- 
+Uji Nanigashi <53845049+nanigashi-uji@users.noreply.github.com>

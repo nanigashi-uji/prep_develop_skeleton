@@ -1,0 +1,4 @@
+Data-files for prep_skeleton:
+
+  template/ : Template files for C++ skeleton
+  samples/  : Sample files for "configure.ac"
